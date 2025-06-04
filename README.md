@@ -7,10 +7,10 @@
 ## 🖼️ Preview
 
 ### 📁 Dashboard File Manager
-![Preview File Manager](https://yourdomain.com/screenshots/ayana-dashboard.png)
+![Preview File Manager](https://raw.githubusercontent.com/Sw4CyEx/AyanaFileManager/refs/heads/main/AyanaFileManager.png)
 
 ### ⚙️ Panel Settings & Logging
-![Preview Settings Panel](https://yourdomain.com/screenshots/ayana-settings.png)
+![Preview Settings Panel](https://raw.githubusercontent.com/Sw4CyEx/AyanaFileManager/refs/heads/main/AyanaFileManager-Settings.png)
 
 ---
 
