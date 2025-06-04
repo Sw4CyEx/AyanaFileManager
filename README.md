@@ -80,11 +80,3 @@ Open-source untuk keperluan pribadi. Hubungi developer untuk penggunaan komersia
 ## 🤝 Kontribusi
 
 Silakan fork dan kirim pull request untuk kontribusi fitur atau perbaikan bug.
-
----
-
-## 📧 Kontak
-
-Untuk bantuan atau laporan bug:  
-📩 Email: devsupport@yourdomain.com  
-🌐 Website: [yourdomain.com](https://yourdomain.com)
