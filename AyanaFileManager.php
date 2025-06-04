@@ -5,14 +5,13 @@ error_reporting(0);
 // --- PENGATURAN KRUSIAL UNTUK ENKRIPSI ---
 // !! GANTI PASSPHRASE INI DENGAN SESUATU YANG KUAT, UNIK, DAN RAHASIA !!
 // !! JANGAN SAMPAI HILANG, KARENA DATA KONFIGURASI TIDAK AKAN BISA DIBACA !!
-define('LOG_CONFIG_ENCRYPTION_PASSPHRASE', 'GantiDenganPassphraseSuperRahasiaAndaYangPanjangDanKuat!');
+define('LOG_CONFIG_ENCRYPTION_PASSPHRASE', 'GantiDenganPassphraseSuperRahasiaAndaYangPanjangDanKuat!'); // Harap ganti ini!
 define('ENCRYPTION_CIPHER', 'AES-256-CBC'); // Metode enkripsi
 
 define('CONFIG_LOG_FILE_PATH', __DIR__ . '/config_log.json');
 
 // --- FUNGSI ENKRIPSI & DEKRIPSI ---
 function get_encryption_key() {
-    // Menggunakan SHA256 untuk menghasilkan kunci 32-byte dari passphrase
     return hash('sha256', LOG_CONFIG_ENCRYPTION_PASSPHRASE, true);
 }
 
@@ -35,7 +34,6 @@ function decrypt_data($cipher_text_base64, $iv_base64, $key) {
     return json_decode($decrypted_json, true);
 }
 
-
 // --- FUNGSI UNTUK MEMUAT DAN MENYIMPAN KONFIGURASI LOGGING DARI/KE FILE JSON ---
 function load_logging_config_from_file(&$main_config_array) {
     global $config_log_file_writable_warning, $openssl_unavailable_warning;
@@ -47,7 +45,7 @@ function load_logging_config_from_file(&$main_config_array) {
         'email_subject_prefix' => '[FileMan Log]'
     ];
 
-    $loaded_credentials = $default_log_credentials; // Mulai dengan default
+    $loaded_credentials = $default_log_credentials; 
 
     if (!function_exists('openssl_encrypt')) {
         $openssl_unavailable_warning = "Peringatan: Ekstensi OpenSSL PHP tidak tersedia. Konfigurasi logging akan disimpan/dibaca sebagai plain text (tidak aman). Sangat disarankan untuk mengaktifkan OpenSSL.";
@@ -59,7 +57,6 @@ function load_logging_config_from_file(&$main_config_array) {
 
         if (is_array($data_from_file)) {
             if (isset($data_from_file['iv']) && isset($data_from_file['cipher_text']) && function_exists('openssl_decrypt')) {
-                // Format terenkripsi baru
                 $key = get_encryption_key();
                 $decrypted = decrypt_data($data_from_file['cipher_text'], $data_from_file['iv'], $key);
                 if ($decrypted !== false && is_array($decrypted)) {
@@ -68,31 +65,24 @@ function load_logging_config_from_file(&$main_config_array) {
                     $config_log_file_writable_warning .= " Error: Gagal mendekripsi " . basename(CONFIG_LOG_FILE_PATH) . ". File mungkin rusak atau passphrase salah. Menggunakan default. ";
                 }
             } elseif (!isset($data_from_file['iv']) && !isset($data_from_file['cipher_text'])) {
-                // Format plain-text lama, coba upgrade
                 $loaded_credentials = array_merge($default_log_credentials, $data_from_file);
                 if (function_exists('openssl_encrypt')) {
-                    $save_attempt = save_logging_config_to_file($loaded_credentials, false); // false untuk tidak redirect
+                    $save_attempt = save_logging_config_to_file($loaded_credentials, false); 
                     if ($save_attempt !== true) {
                          $config_log_file_writable_warning .= " Info: Mencoba mengenkripsi file konfigurasi log lama, tetapi gagal: " . (is_string($save_attempt) ? $save_attempt : "Unknown error") . ". ";
                     } else {
                          $config_log_file_writable_warning .= " Info: File konfigurasi log lama berhasil dienkripsi. ";
                     }
-                } else {
-                    // OpenSSL not available, keep using plain text
                 }
             } else {
                  $config_log_file_writable_warning .= " Error: Format " . basename(CONFIG_LOG_FILE_PATH) . " tidak dikenali. Menggunakan default. ";
             }
         }
     } elseif (is_writable(__DIR__) && function_exists('openssl_encrypt')) {
-        // File tidak ada, coba buat dengan default terenkripsi
         $save_attempt = save_logging_config_to_file($default_log_credentials, false);
-        if ($save_attempt !== true) {
-            // Gagal membuat file, akan ada warning dari save_logging_config_to_file
-        }
+        // Warning akan ditangani oleh save_logging_config_to_file jika gagal
     }
     
-    // Merge loaded/default credentials into the main config
     if (isset($main_config_array['logging']['discord'])) {
          $main_config_array['logging']['discord']['webhook_url'] = $loaded_credentials['discord_webhook_url'];
          $main_config_array['logging']['discord']['username'] = $loaded_credentials['discord_username'];
@@ -110,8 +100,6 @@ function load_logging_config_from_file(&$main_config_array) {
 }
 
 function save_logging_config_to_file($data_to_save, $do_redirect_and_log = true) {
-    global $openssl_unavailable_warning;
-
     $credentials_to_save = [
         'discord_webhook_url' => filter_var($data_to_save['discord_webhook_url'] ?? '', FILTER_SANITIZE_URL),
         'discord_username' => htmlspecialchars($data_to_save['discord_username'] ?? 'FileManager Bot', ENT_QUOTES, 'UTF-8'),
@@ -131,7 +119,6 @@ function save_logging_config_to_file($data_to_save, $do_redirect_and_log = true)
         }
         $file_content_to_write = json_encode($encrypted_payload, JSON_PRETTY_PRINT);
     } else {
-        // OpenSSL not available, save as plain text (warning already set)
         $file_content_to_write = json_encode($credentials_to_save, JSON_PRETTY_PRINT);
     }
     
@@ -144,7 +131,7 @@ function save_logging_config_to_file($data_to_save, $do_redirect_and_log = true)
     }
 
     if (@file_put_contents(CONFIG_LOG_FILE_PATH, $file_content_to_write) !== false) {
-        if ($do_redirect_and_log) { // Hanya log dan redirect jika ini adalah aksi pengguna langsung
+        if ($do_redirect_and_log) { 
             log_action("Logging Configuration Updated", "User updated external logging service credentials via UI.", "CONFIG_CHANGE");
         }
         return true;
@@ -152,15 +139,17 @@ function save_logging_config_to_file($data_to_save, $do_redirect_and_log = true)
     return "Error: Gagal menyimpan konfigurasi log ke file (" . basename(CONFIG_LOG_FILE_PATH) . ").";
 }
 
-
 // --- KONFIGURASI UTAMA (Default) ---
 $config = [
     'judul_filemanager' => 'Ayana File Manager',
-    'deskripsi_filemanager' => 'Kelola file dengan konfigurasi logging terenkripsi via UI.',
+    'deskripsi_filemanager' => 'Ayana File Manager adalah file manager berbasis web (PHP) dengan tampilan modern dark mode. Didesain untuk memudahkan pengelolaan file langsung dari browser, tanpa perlu akses FTP atau SSH.',
+    'author_name' => 'Sw4CyEx',
+    'author_github_url' => 'https://github.com/Sw4CyEx/',
+    'author_repo_url' => 'https://github.com/Sw4CyEx/AyanaFileManager',
     'direktori_dasar' => __DIR__, 
-    'aktifkan_login' => false,
+    'aktifkan_login' => false, // Ubah ke true untuk mengaktifkan login
     'pengguna' => [
-        'admin' => '$2y$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' // GANTI HASH INI!
+        'admin' => '$2y$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' // GANTI HASH INI! Buat dengan password_hash("password_anda", PASSWORD_DEFAULT);
     ],
     'fitur_berbahaya' => [
         'terminal' => true, 
@@ -196,10 +185,9 @@ $config = [
     ],
 ];
 
-$config_log_file_writable_warning = ''; // Akan diisi oleh load_logging_config_from_file jika ada masalah
-$openssl_unavailable_warning = ''; // Akan diisi jika openssl tidak ada
+$config_log_file_writable_warning = ''; 
+$openssl_unavailable_warning = ''; 
 load_logging_config_from_file($config);
-
 
 if ($config['fitur_berbahaya']['tampilkan_error_php']) {
     error_reporting(E_ALL);
@@ -212,92 +200,46 @@ function send_to_discord($message, $webhook_url, $bot_username) {
     if (!function_exists('curl_init') || empty($webhook_url)) return false;
     $data = json_encode(['content' => $message, 'username' => $bot_username]);
     $ch = curl_init($webhook_url);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5); 
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-    $result = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    curl_setopt_array($ch, [CURLOPT_HTTPHEADER => ['Content-Type: application/json'], CURLOPT_POST => 1, CURLOPT_POSTFIELDS => $data, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 5, CURLOPT_CONNECTTIMEOUT => 5]);
+    $result = curl_exec($ch); $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
     return ($http_code >= 200 && $http_code < 300);
 }
 
 function send_to_telegram($message, $bot_token, $chat_id) {
     if (!function_exists('curl_init') || empty($bot_token) || empty($chat_id)) return false;
     $url = "https://api.telegram.org/bot{$bot_token}/sendMessage";
-    $tg_message = str_replace(
-        ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'],
-        ['\_', '\*', '\[', '\]', '$$', '$$', '\~', '\`', '\>', '\#', '\+', '\-', '\=', '\|', '\{', '\}', '\.', '\!'],
-        $message
-    );
+    $tg_message = str_replace(['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'], ['\_', '\*', '\[', '\]', '$$', '$$', '\~', '\`', '\>', '\#', '\+', '\-', '\=', '\|', '\{', '\}', '\.', '\!'], $message);
     $data = ['chat_id' => $chat_id, 'text' => $tg_message, 'parse_mode' => 'MarkdownV2'];
-    
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-    $result = curl_exec($ch);
-    curl_close($ch);
-    return (bool)$result; 
+    curl_setopt_array($ch, [CURLOPT_URL => $url, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => http_build_query($data), CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 5, CURLOPT_CONNECTTIMEOUT => 5]);
+    $result = curl_exec($ch); curl_close($ch); return (bool)$result; 
 }
 
 function send_to_email($message, $to_address, $from_address, $subject_prefix, $status) {
     if (empty($to_address) || empty($from_address)) return false;
     $subject = "{$subject_prefix} [$status] Notifikasi Aksi";
-    $headers = "From: {$from_address}\r\n";
-    $headers .= "Reply-To: {$from_address}\r\n";
-    $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
+    $headers = "From: {$from_address}\r\nReply-To: {$from_address}\r\nContent-Type: text/plain; charset=UTF-8\r\nX-Mailer: PHP/" . phpversion();
     return mail($to_address, $subject, $message, $headers);
 }
 
 function is_service_logging_active($service_name) {
-    global $config;
-    if (!$config['logging']['enabled']) return false; 
-
-    $service_config_key_exists = isset($config['logging'][$service_name]['enabled']);
-    $service_config_enabled = $service_config_key_exists ? $config['logging'][$service_name]['enabled'] : false;
-
+    global $config; if (!$config['logging']['enabled']) return false; 
+    $service_config_enabled = $config['logging'][$service_name]['enabled'] ?? false;
     $session_key = 'logging_override_' . $service_name . '_enabled';
-    if (isset($_SESSION[$session_key])) {
-        return $_SESSION[$session_key]; 
-    }
-    return $service_config_enabled; 
+    return isset($_SESSION[$session_key]) ? $_SESSION[$session_key] : $service_config_enabled; 
 }
 
 function log_action($action_name, $details = "", $status = "INFO") {
-    global $config;
-    if (!$config['logging']['enabled']) { 
-        return;
-    }
-
+    global $config; if (!$config['logging']['enabled']) return;
     $timestamp = date("Y-m-d H:i:s T");
     $log_message = "[$timestamp] [$status] $action_name";
+    if ($config['logging']['log_ip_address'] && isset($_SERVER['REMOTE_ADDR'])) $log_message .= " | IP: " . $_SERVER['REMOTE_ADDR'];
+    if (isset($_SESSION['pengguna_login'])) $log_message .= " | User: " . $_SESSION['pengguna_login'];
+    if (!empty($details)) $log_message .= " | Details: " . (is_array($details) ? json_encode($details) : $details);
 
-    if ($config['logging']['log_ip_address'] && isset($_SERVER['REMOTE_ADDR'])) {
-        $log_message .= " | IP: " . $_SERVER['REMOTE_ADDR'];
-    }
-    if (isset($_SESSION['pengguna_login'])) {
-        $log_message .= " | User: " . $_SESSION['pengguna_login'];
-    }
-    if (!empty($details)) {
-        $log_message .= " | Details: " . (is_array($details) ? json_encode($details) : $details);
-    }
-
-    if (is_service_logging_active('discord') && !empty($config['logging']['discord']['webhook_url'])) {
-        send_to_discord($log_message, $config['logging']['discord']['webhook_url'], $config['logging']['discord']['username']);
-    }
-    if (is_service_logging_active('telegram') && !empty($config['logging']['telegram']['bot_token']) && !empty($config['logging']['telegram']['chat_id'])) {
-        send_to_telegram($log_message, $config['logging']['telegram']['bot_token'], $config['logging']['telegram']['chat_id']);
-    }
-    if (is_service_logging_active('email') && !empty($config['logging']['email']['to_address'])) {
-        send_to_email($log_message, $config['logging']['email']['to_address'], $config['logging']['email']['from_address'], $config['logging']['email']['subject_prefix'], $status);
-    }
+    if (is_service_logging_active('discord') && !empty($config['logging']['discord']['webhook_url'])) send_to_discord($log_message, $config['logging']['discord']['webhook_url'], $config['logging']['discord']['username']);
+    if (is_service_logging_active('telegram') && !empty($config['logging']['telegram']['bot_token']) && !empty($config['logging']['telegram']['chat_id'])) send_to_telegram($log_message, $config['logging']['telegram']['bot_token'], $config['logging']['telegram']['chat_id']);
+    if (is_service_logging_active('email') && !empty($config['logging']['email']['to_address'])) send_to_email($log_message, $config['logging']['email']['to_address'], $config['logging']['email']['from_address'], $config['logging']['email']['subject_prefix'], $status);
 }
 
 // --- FUNGSI HELPER ---
@@ -345,49 +287,39 @@ if (isset($_GET['status_msg'])) { $action_message = ['type' => ($_GET['status_ty
 
 if ($config['aktifkan_login'] && !check_login() && $aksi !== 'login_page') { /* Tampilkan login */ } 
 elseif ($aksi === 'logout') { handle_logout(); } 
+elseif (($aksi === 'toggle_logging_service' || $aksi === 'save_logging_config') && !$config['fitur_berbahaya']['akses_pengaturan_log']) {
+    $msg = "Akses ke pengaturan log dinonaktifkan oleh administrator."; $type = "danger";
+    log_action("Logging Action Attempt Denied", "Feature 'akses_pengaturan_log' disabled for action: ".$aksi, "WARNING");
+    header("Location: " . basename(__FILE__) . "?path=" . urlencode($relative_current_path) . "&status_msg=" . urlencode($msg) . "&status_type=" . $type . "&show_logging_settings=true");
+    exit;
+}
 elseif ($aksi === 'toggle_logging_service' && isset($_GET['service'])) {
-    $service = $_GET['service'];
-    $valid_services = ['discord', 'telegram', 'email'];
+    $service = $_GET['service']; $valid_services = ['discord', 'telegram', 'email'];
     if (in_array($service, $valid_services)) {
         $session_key = 'logging_override_' . $service . '_enabled';
         $current_effective_status = $config['logging'][$service]['enabled'] ?? false;
-        if (isset($_SESSION[$session_key])) {
-            $current_effective_status = $_SESSION[$session_key];
-        }
+        if (isset($_SESSION[$session_key])) $current_effective_status = $_SESSION[$session_key];
         $_SESSION[$session_key] = !$current_effective_status;
         $new_status_text = ($_SESSION[$session_key] ? "diaktifkan" : "dinonaktifkan");
-        $msg = "Logging untuk " . ucfirst($service) . " berhasil " . $new_status_text . " untuk sesi ini.";
-        $type = "success";
+        $msg = "Logging untuk " . ucfirst($service) . " berhasil " . $new_status_text . " untuk sesi ini."; $type = "success";
         log_action("Logging Setting Changed by User (Toggle)", "Service: ".ucfirst($service).", New Session Status: ".($_SESSION[$session_key] ? "Enabled" : "Disabled"), "INFO");
-    } else {
-        $msg = "Layanan logging tidak valid.";
-        $type = "danger";
-    }
-    header("Location: " . basename(__FILE__) . "?path=" . urlencode($relative_current_path) . "&status_msg=" . urlencode($msg) . "&status_type=" . $type . "&show_logging_settings=true");
-    exit;
+    } else { $msg = "Layanan logging tidak valid."; $type = "danger"; }
+    header("Location: " . basename(__FILE__) . "?path=" . urlencode($relative_current_path) . "&status_msg=" . urlencode($msg) . "&status_type=" . $type . "&show_logging_settings=true"); exit;
 }
 elseif ($aksi === 'save_logging_config' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (check_login() || !$config['aktifkan_login']) {
-        $save_result = save_logging_config_to_file($_POST); // true on success, error string on failure
+        $save_result = save_logging_config_to_file($_POST); 
         if ($save_result === true) {
-            $msg = "Konfigurasi logging eksternal berhasil disimpan.";
-            $type = "success";
-            // Reload config into current $config array for immediate effect if needed
+            $msg = "Konfigurasi logging eksternal berhasil disimpan."; $type = "success";
             load_logging_config_from_file($config); 
-        } else {
-            $msg = $save_result; // Contains error message from save function
-            $type = "danger";
-        }
-    } else {
-        $msg = "Anda harus login untuk menyimpan konfigurasi.";
-        $type = "danger";
-    }
-    header("Location: " . basename(__FILE__) . "?path=" . urlencode($relative_current_path) . "&status_msg=" . urlencode($msg) . "&status_type=" . $type . "&show_logging_settings=true");
-    exit;
+        } else { $msg = $save_result; $type = "danger"; }
+    } else { $msg = "Anda harus login untuk menyimpan konfigurasi."; $type = "danger"; }
+    header("Location: " . basename(__FILE__) . "?path=" . urlencode($relative_current_path) . "&status_msg=" . urlencode($msg) . "&status_type=" . $type . "&show_logging_settings=true"); exit;
 }
+// ... (Sisa logika aksi seperti upload, create_folder, dll. tetap sama) ...
+// Pastikan semua aksi lain ada di dalam blok elseif (check_login() || !$config['aktifkan_login']) { ... }
 elseif (check_login() || !$config['aktifkan_login']) {
     $msg = ""; $type = "info"; 
-    // ... (Aksi upload, create_folder, create_file, dst.) ...
     if ($aksi === 'upload' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($_FILES['files'])) {
             $files = $_FILES['files']; $upload_count = 0; $errors = []; $malware_detected_files = [];
@@ -552,7 +484,7 @@ elseif (check_login() || !$config['aktifkan_login']) {
                     $msg = $zipped_count . " item berhasil di-zip ke '" . htmlspecialchars($zip_name) . "'."; $type = "success"; 
                     log_action("Files Zipped", "Archive: ".htmlspecialchars($zip_name).", Items: ".implode(', ',$zipped_items_log).", Path: ".htmlspecialchars($relative_current_path), "SUCCESS");
                 } else { 
-                    $msg = "Tidak ada item valid yang dipilih untuk di-zip."; $type = "warning"; unlink($zip_path); 
+                    $msg = "Tidak ada item valid yang dipilih untuk di-zip."; $type = "warning"; if(file_exists($zip_path)) unlink($zip_path); 
                     log_action("Zip Attempt Failed", "No valid items selected", "WARNING");
                 }
             } else { $msg = "Gagal membuat file zip."; $type = "danger"; log_action("Zip Failed", "Could not create zip archive", "ERROR");}
@@ -670,7 +602,6 @@ elseif (check_login() || !$config['aktifkan_login']) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php if ($aksi === 'edit' && isset($_GET['item'])) { echo "Edit: " . htmlspecialchars(basename($_GET['item'])) . " - " . htmlspecialchars($config['judul_filemanager']); } else { echo htmlspecialchars($config['judul_filemanager']) . " - " . htmlspecialchars(basename($current_path)); } ?></title>
     <style>
-        /* CSS (AYANA FILE MANAGER <3) */
         :root { 
             --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
@@ -843,6 +774,45 @@ elseif (check_login() || !$config['aktifkan_login']) {
         body.dark-mode .security-note { color: var(--color-secondary-dark); background-color: rgba(251,191,36, 0.1); border-color: rgba(251,191,36, 0.2); }
         .encryption-warning { font-size: 0.85em; padding: 0.75rem; margin-bottom:1rem; border: 1px solid var(--color-warning-light); background-color: rgba(245,158,11,0.05); color: var(--color-warning-light); border-radius: var(--border-radius-sm); }
         body.dark-mode .encryption-warning { border-color: var(--color-warning-dark); background-color: rgba(251,191,36,0.1); color: var(--color-warning-dark); }
+        
+        /* CSS untuk Info Modal yang lebih cantik */
+        .modal-body .info-section { margin-bottom: 1.5rem; }
+        .modal-body .info-section:last-child { margin-bottom: 0.5rem; }
+        .modal-body .info-section h5 {
+            font-size: 1.05em; /* Sedikit lebih kecil dari judul modal */
+            font-weight: 600;
+            color: var(--color-primary-light);
+            margin-top: 0;
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 2px solid var(--color-primary-light);
+            display: inline-block; /* Agar border hanya sepanjang teks */
+        }
+        body.dark-mode .modal-body .info-section h5 {
+            color: var(--color-primary-dark);
+            border-bottom-color: var(--color-primary-dark);
+        }
+        .modal-body .info-section p { margin-bottom: 0.6rem; line-height: 1.7; }
+        .modal-body .info-section p strong { color: var(--color-text-light); }
+        body.dark-mode .modal-body .info-section p strong { color: var(--color-text-dark); }
+
+        .modal-body .info-hr {
+            border: 0;
+            border-top: 1px dashed var(--color-border-light);
+            margin: 2rem 0; /* Jarak lebih besar */
+        }
+        body.dark-mode .modal-body .info-hr { border-top-color: var(--color-border-dark); }
+        .modal-body .info-link {
+            color: var(--color-primary-hover-light); /* Warna link lebih menonjol */
+            text-decoration: none;
+            font-weight: 500;
+        }
+        body.dark-mode .modal-body .info-link { color: var(--color-primary-hover-dark); }
+        .modal-body .info-link:hover { text-decoration: underline; color: var(--color-primary-light); }
+        body.dark-mode .modal-body .info-link:hover { color: var(--color-primary-dark); }
+        #systemInfoModal .modal-content { max-width: 650px; /* Sedikit lebih lebar untuk info */ }
+
+
         @media (max-width: 768px) { .navbar { flex-direction: column; align-items: flex-start; gap: 0.5rem; } .navbar .nav-buttons { margin-top: 0.5rem; margin-left: 0; width: 100%; display: flex; flex-direction: column; gap: 0.5rem; } .navbar .nav-buttons .btn { width: 100%; } .toolbar { flex-direction: column; gap: 1rem; } .search-bar { width: 100%; } .file-table { font-size: 0.85em; } .file-table th, .file-table td { padding: 0.5rem; } .file-table .actions .btn { display: block; width: calc(100% - 0.6rem); margin-bottom: 0.5rem; text-align: center; } .modal-content { width: 95%; margin: 5% auto; padding: 1rem; } .breadcrumb { font-size: 0.8em; } .edit-page-container .form-group textarea { min-height: calc(100vh - 250px); } }
         @media (max-width: 480px) { .container { padding: 15px; } .navbar .title { font-size: 1.2em; } .file-table th:nth-child(4), .file-table td:nth-child(4), .file-table th:nth-child(6), .file-table td:nth-child(6), .file-table th:nth-child(8), .file-table td:nth-child(8) { display: none; } .file-table .icon { margin-right: 0.3rem; } }
     </style>
@@ -895,9 +865,8 @@ elseif (check_login() || !$config['aktifkan_login']) {
     </div>
     <div class="container">
         <?php if ($action_message): ?> <div class="alert alert-<?php echo htmlspecialchars($action_message['type']); ?>"><?php echo htmlspecialchars($action_message['text']); ?></div> <?php endif; ?>
-        <?php if (!empty($config_log_file_writable_warning)): ?> <div class="alert alert-warning"><?php echo $config_log_file_writable_warning; /* Already HTML, no need to escape */ ?></div> <?php endif; ?>
+        <?php if (!empty($config_log_file_writable_warning)): ?> <div class="alert alert-warning"><?php echo $config_log_file_writable_warning; ?></div> <?php endif; ?>
         <?php if (!empty($openssl_unavailable_warning)): ?> <div class="alert alert-danger"><?php echo htmlspecialchars($openssl_unavailable_warning); ?></div> <?php endif; ?>
-
 
         <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="?path=" class="glitch-hover">🏠 Root</a></li><?php $path_parts = explode(DIRECTORY_SEPARATOR, $relative_current_path); $current_breadcrumb_path = ''; foreach ($path_parts as $part) { if (empty($part)) continue; $current_breadcrumb_path_part_only = $current_breadcrumb_path . $part; $current_breadcrumb_path .= $part . DIRECTORY_SEPARATOR; if ($current_breadcrumb_path_part_only == rtrim($relative_current_path, DIRECTORY_SEPARATOR) || $current_breadcrumb_path_part_only == $relative_current_path) { echo '<li class="breadcrumb-item active" aria-current="page">' . htmlspecialchars($part) . '</li>'; } else { echo '<li class="breadcrumb-item"><a href="?path=' . urlencode($current_breadcrumb_path_part_only) . '" class="glitch-hover">' . htmlspecialchars($part) . '</a></li>'; } } ?></ol></nav>
         <div class="current-path-info">Lokasi: <?php echo htmlspecialchars($current_path); ?></div>
@@ -974,8 +943,49 @@ elseif (check_login() || !$config['aktifkan_login']) {
     <div id="renameModal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('renameModal')">&times;</span><div class="modal-header"><h4><span class="icon">🏷️</span> Rename Item</h4></div><form method="POST" action="?aksi=rename&path=<?php echo urlencode($relative_current_path); ?>"><div class="modal-body"><input type="hidden" id="old_name_rename" name="old_name"><div class="form-group"><label for="new_name_rename">Nama Baru:</label><input type="text" id="new_name_rename" name="new_name" required></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('renameModal')">Batal</button><button type="submit" class="btn btn-primary glitch-hover"><span class="icon">✔️</span> Rename</button></div></form></div></div>
     <div id="chmodModal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('chmodModal')">&times;</span><div class="modal-header"><h4><span class="icon">🔑</span> Ubah Izin (Chmod)</h4></div><form method="POST" action="?aksi=chmod&path=<?php echo urlencode($relative_current_path); ?>"><div class="modal-body"><input type="hidden" id="item_chmod" name="item"><p>Item: <strong id="chmod_item_name_display"></strong></p><div class="form-group"><label for="permissions_chmod">Izin Baru (mis: 0755):</label><input type="text" id="permissions_chmod" name="permissions" pattern="0[0-7]{3}" title="Format octal 4 digit, mis: 0755" required></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('chmodModal')">Batal</button><button type="submit" class="btn btn-primary glitch-hover" <?php if(!$config['fitur_berbahaya']['edit_chmod_luas']) echo 'disabled title="Fitur dinonaktifkan"'; ?>><span class="icon">✔️</span> Ubah</button></div></form></div></div>
     <div id="editTimeModal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('editTimeModal')">&times;</span><div class="modal-header"><h4><span class="icon">⏱️</span> Ubah Waktu Modifikasi</h4></div><form method="POST" action="?aksi=edit_time&path=<?php echo urlencode($relative_current_path); ?>"><div class="modal-body"><input type="hidden" id="item_edit_time" name="item"><p>Item: <strong id="edit_time_item_name_display"></strong></p><div class="form-group"><label for="datetime_edit_time">Waktu Baru:</label><input type="datetime-local" id="datetime_edit_time" name="datetime" required></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('editTimeModal')">Batal</button><button type="submit" class="btn btn-primary glitch-hover"><span class="icon">✔️</span> Ubah</button></div></form></div></div>
-    <div id="systemInfoModal" class="modal"><div class="modal-content"><span class="close-btn" onclick="closeModal('systemInfoModal')">&times;</span><div class="modal-header"><h4><span class="icon">ℹ️</span> Informasi Sistem</h4></div><div class="modal-body" style="font-size:0.9em; line-height:1.8;"><p><strong>OS:</strong> <?php echo php_uname('s') . ' ' . php_uname('r') . ' ' . php_uname('m'); ?></p><p><strong>PHP:</strong> <?php echo phpversion(); ?></p><p><strong>Server:</strong> <?php echo $_SERVER['SERVER_SOFTWARE']; ?></p><p><strong>Disk Total:</strong> <?php echo format_size(disk_total_space($config['direktori_dasar'])); ?></p><p><strong>Disk Tersedia:</strong> <?php echo format_size(disk_free_space($config['direktori_dasar'])); ?></p><p><strong>Zona Waktu:</strong> <?php echo date_default_timezone_get(); ?></p><p><strong>Max Upload:</strong> <?php echo ini_get('upload_max_filesize'); ?></p><p><strong>Max Post:</strong> <?php echo ini_get('post_max_size'); ?></p></div><div class="modal-footer"><button type="button" class="btn btn-primary" onclick="closeModal('systemInfoModal')">Tutup</button></div></div></div>
     
+    <div id="systemInfoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal('systemInfoModal')">&times;</span>
+            <div class="modal-header"><h4><span class="icon">ℹ️</span> Informasi</h4></div>
+            <div class="modal-body">
+                <div class="info-section">
+                    <h5>Informasi Sistem</h5>
+                    <p><strong>OS:</strong> <?php echo php_uname('s') . ' ' . php_uname('r') . ' ' . php_uname('m'); ?></p>
+                    <p><strong>PHP:</strong> <?php echo phpversion(); ?></p>
+                    <p><strong>Server:</strong> <?php echo $_SERVER['SERVER_SOFTWARE']; ?></p>
+                    <p><strong>Disk Total:</strong> <?php echo format_size(disk_total_space($config['direktori_dasar'])); ?></p>
+                    <p><strong>Disk Tersedia:</strong> <?php echo format_size(disk_free_space($config['direktori_dasar'])); ?></p>
+                    <p><strong>Zona Waktu:</strong> <?php echo date_default_timezone_get(); ?></p>
+                    <p><strong>Max Upload:</strong> <?php echo ini_get('upload_max_filesize'); ?></p>
+                    <p><strong>Max Post:</strong> <?php echo ini_get('post_max_size'); ?></p>
+                </div>
+                <hr class="info-hr">
+                <div class="info-section">
+                    <h5>Tentang <?php echo htmlspecialchars($config['judul_filemanager']); ?></h5>
+                    <p><?php echo htmlspecialchars($config['deskripsi_filemanager']); ?></p>
+                    <p><strong>Author:</strong> <?php echo htmlspecialchars($config['author_name']); ?></p>
+                    <p>
+                        <strong>GitHub Profile:</strong> 
+                        <a href="<?php echo htmlspecialchars($config['author_github_url']); ?>" target="_blank" class="glitch-hover info-link">
+                            <?php echo htmlspecialchars($config['author_github_url']); ?>
+                        </a>
+                    </p>
+                    <p>
+                        <strong>Repository Proyek:</strong> 
+                        <a href="<?php echo htmlspecialchars($config['author_repo_url']); ?>" target="_blank" class="glitch-hover info-link">
+                            <?php echo htmlspecialchars($config['author_repo_url']); ?>
+                        </a>
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeModal('systemInfoModal')">Tutup</button>
+            </div>
+        </div>
+    </div>
+    
+    <?php if ($config['fitur_berbahaya']['akses_pengaturan_log']): ?>
     <div id="loggingSettingsModal" class="modal" <?php if(isset($_GET['show_logging_settings'])) echo 'style="display:flex;"'; ?>>
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal('loggingSettingsModal')">&times;</span>
@@ -1012,7 +1022,7 @@ elseif (check_login() || !$config['aktifkan_login']) {
                 <hr>
                 <h5>Konfigurasi Kredensial Logging (Disimpan Terenkripsi ke File):</h5>
                 <p style="font-size: 0.85em; margin-bottom: 1rem;">Perubahan di sini akan disimpan secara permanen (terenkripsi) ke file <code>config_log.json</code> dan berlaku untuk semua sesi.</p>
-                <?php if (!empty($config_log_file_writable_warning) && strpos($config_log_file_writable_warning, "Info:") !== 0): /* Jangan tampilkan info sebagai error */ ?> <div class="alert alert-warning" style="font-size:0.85em;"><?php echo htmlspecialchars($config_log_file_writable_warning); ?></div> <?php endif; ?>
+                <?php if (!empty($config_log_file_writable_warning) && strpos($config_log_file_writable_warning, "Info:") !== 0): ?> <div class="alert alert-warning" style="font-size:0.85em;"><?php echo htmlspecialchars($config_log_file_writable_warning); ?></div> <?php endif; ?>
                 <form method="POST" action="?aksi=save_logging_config&path=<?php echo urlencode($relative_current_path); ?>">
                     <div class="form-group">
                         <label for="log_discord_webhook_url">Discord Webhook URL:</label>
@@ -1052,11 +1062,22 @@ elseif (check_login() || !$config['aktifkan_login']) {
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <?php if ($config['fitur_berbahaya']['terminal']): ?>
     <div id="terminalModal" class="modal" <?php if(isset($_GET['show_terminal'])) echo 'style="display:flex;"'; ?>><div class="modal-content" style="width: 90%; max-width: 800px;"><span class="close-btn" onclick="closeModal('terminalModal')">&times;</span><div class="modal-header"><h4><span class="icon">💀</span> Terminal (RISIKO TINGGI!)</h4></div><div class="modal-body"><p style="color:var(--color-danger-light); font-weight:bold;">PERINGATAN: Penggunaan terminal web sangat berbahaya. Hanya jalankan perintah yang Anda pahami sepenuhnya.</p><body:dark-mode><p style="color:var(--color-danger-dark); font-weight:bold;">PERINGATAN: Penggunaan terminal web sangat berbahaya. Hanya jalankan perintah yang Anda pahami sepenuhnya.</p></body:dark-mode><div id="terminal-output"><?php if (isset($_SESSION['terminal_output'])) { echo htmlspecialchars($_SESSION['terminal_output']); unset($_SESSION['terminal_output']); } else { echo "Selamat datang di terminal.\n"; }?></div><form method="POST" action="?aksi=terminal_exec&path=<?php echo urlencode($relative_current_path); ?>" id="terminal-form"><div class="input-group"><span class="input-group-prepend"><?php echo htmlspecialchars(basename($current_path)); ?> $</span><input type="text" id="terminal_command" name="command" autofocus value="<?php echo isset($_SESSION['last_command']) ? htmlspecialchars($_SESSION['last_command']) : ''; unset($_SESSION['last_command']); ?>"><button type="submit" class="btn btn-primary glitch-hover">Jalankan</button></div></form></div><div class="modal-footer"><button type="button" class="btn btn-secondary" onclick="closeModal('terminalModal')">Tutup</button></div></div></div>
     <?php endif; ?>
-    <div class="footer"><p>&copy; <?php echo date("Y"); ?> <?php echo htmlspecialchars($config['judul_filemanager']); ?>. Dibuat dengan ❤️.</p></div>
+    <div class="footer">
+        <p>&copy; <?php echo date("Y"); ?> 
+            <a href="<?php echo htmlspecialchars($config['author_repo_url']); ?>" target="_blank" class="glitch-hover" style="color: inherit; text-decoration: none; font-weight:500;">
+                <?php echo htmlspecialchars($config['judul_filemanager']); ?>
+            </a>. 
+            Dibuat dengan ❤️ oleh 
+            <a href="<?php echo htmlspecialchars($config['author_github_url']); ?>" target="_blank" class="glitch-hover" style="color: inherit; text-decoration: none; font-weight:500;">
+                <?php echo htmlspecialchars($config['author_name']); ?>
+            </a>.
+        </p>
+    </div>
 <?php endif; ?>
 </div>
 <button id="scrollTopBtn" title="Kembali ke atas">⬆️</button>
@@ -1096,7 +1117,7 @@ elseif (check_login() || !$config['aktifkan_login']) {
             mutations.forEach(mutation => {
                 if (mutation.attributeName === 'style' && modalEl.style.display === 'flex') {
                     const firstFocusable = modalEl.querySelector('input[type="text"], input[type="password"], input[type="datetime-local"], input[type="url"], input[type="email"], textarea, button:not([disabled])');
-                    if (firstFocusable && (modalEl.id === 'createFolderModal' || modalEl.id === 'createFileModal' || modalEl.id === 'renameModal' || modalEl.id === 'chmodModal' || modalEl.id === 'editTimeModal' || modalEl.id === 'terminalModal' )) { // Removed loggingSettingsModal from auto-focusing form fields
+                    if (firstFocusable && (modalEl.id === 'createFolderModal' || modalEl.id === 'createFileModal' || modalEl.id === 'renameModal' || modalEl.id === 'chmodModal' || modalEl.id === 'editTimeModal' || modalEl.id === 'terminalModal' )) { 
                         if (modalEl.id === 'renameModal') document.getElementById('new_name_rename')?.select();
                         else firstFocusable.focus();
                     }
